@@ -9,18 +9,18 @@ def part1(card_dict: Dict[int, Tuple[List[int], List[int]]]) -> int:
 def part2(card_dict: Dict[int, Tuple[List[int], List[int]]]) -> int:
     card_count = 0
     match_dict = dict([(n, len(set(w) & set(y))) for n, (w, y) in card_dict.items()])
+    win_dict = dict()
     # Init queue
     queue = Queue()
-    for card_number in card_dict.keys():
+    for card_number in reversed(card_dict.keys()):
         queue.put(card_number)
-    # Simulate game rules without dynamic programming
+    # Simulate game rules with dynamic programming
     while not queue.empty():
         card_number = queue.get()
-        card_count += 1
-        matches = match_dict[card_number]
-        for i in range(card_number + 1, card_number + match_dict[card_number] + 1):
-            if i in card_dict:
-                queue.put(i)
+        related_cards = [i for i in range(card_number + 1, card_number + match_dict[card_number] + 1) if i in card_dict]
+        if card_number not in win_dict:
+            win_dict[card_number] = sum([win_dict[i] for i in related_cards]) + match_dict[card_number]
+        card_count += win_dict[card_number]
     return card_count
 
 if __name__ == '__main__':
