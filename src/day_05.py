@@ -3,12 +3,12 @@ from typing import Dict, List, Tuple
 resolution_order = ['seed', 'soil', 'fertilizer', 'water', 'light', 'temperature', 'humidity', 'location']
 
 def intersect(current_range: Tuple[int, int], test_range: Tuple[int, int]) -> Tuple[int, int]:
-    ''' intersect((1, 5), (2, 3)) ==> (2, 3) '''
+    ''' intersect(current_range=(1, 5), test_range=(2, 3)) ==> (2, 3) '''
     start, end = max(current_range[0], test_range[0]), min(current_range[1], test_range[1])
     return (start, end) if start <= end else (None, None)
 
 def subtract(current_range: Tuple[int, int], test_range: Tuple[int, int]) -> List[Tuple[int, int]]:
-    ''' subtract((1, 5), (2, 3)) => [(1, 1), (4, 5)] '''
+    ''' subtract(current_range=(1, 5), test_range=(2, 3)) => [(1, 1), (4, 5)] '''
     intersect_start, intersect_end = intersect(current_range, test_range)
     results = []
     if (intersect_start, intersect_end) == (None, None):
@@ -31,13 +31,12 @@ def transform(start_end_list: List[Tuple[int, int]], mapping_rules: List[Tuple[i
             transformational_shift = map_to_start - map_from_start
             overlap_start, overlap_end = intersect((from_start, from_end), (map_from_start, map_from_end))
             if (overlap_start, overlap_end) != (None, None):
+                # Transform according to mapping rule specified
                 transformed_ranges.append((overlap_start + transformational_shift, overlap_end + transformational_shift))
-                updated_unmapped_ranges = []
-                for s, e in unmapped_ranges:
-                    updated_unmapped_ranges.extend(subtract((s, e), (overlap_start, overlap_end)))
-                unmapped_ranges = updated_unmapped_ranges
-        for unmapped_range in unmapped_ranges:
-            transformed_ranges.append(unmapped_range)
+                # Reduce unmapped ranges
+                unmapped_ranges = [survivor for unmapped_range in unmapped_ranges for survivor in subtract(unmapped_range, (overlap_start, overlap_end))]
+        # Not mapped => leave them as-is
+        transformed_ranges.extend(unmapped_ranges)
     return transformed_ranges
 
 
