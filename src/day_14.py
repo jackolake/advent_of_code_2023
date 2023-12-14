@@ -2,40 +2,32 @@ from typing import List, Optional
 import pandas as pd
 
 def roll(seq: str, forward: bool) -> str:  #  O.#O..# => .O#..O#
-    results = []
-    for segment in seq.split('#'):
-        spaces, balls = ''.join(segment.count('.') * ['.']), ''.join(segment.count('O') * ['O'])
-        results.append((spaces + balls) if forward else (balls + spaces))
-    return '#'.join(results)
+    return '#'.join([((s.count('.') * '.') + (s.count('O') * 'O')) if forward else 
+                     ((s.count('O') * 'O') + (s.count('.') * '.')) for s in seq.split('#') ])
 
 def calc_score(df: pd.DataFrame) -> int:
     result = df[::-1].reset_index(drop=True)  # Flip it to calc weight
     return ((result == 'O').sum(axis=1) * (result.index + 1)).sum()
 
-def run(df: pd.DataFrame, roll_count: int) -> int:
-    for i in range(roll_count):
-        if i % 10000 == 0:
-            print(i)
-        # North, west, south, east
-        if i % 4 == 0:  # North
-            for col in df.columns:
-                df[col] = list(roll(''.join(df[col].tolist()), forward=False))
-        elif i % 4 == 1: # west
-            for idx in df.index:
-                df.loc[idx] = list(roll(''.join(df.loc[idx].tolist()), forward=False))
-        elif i % 4 == 2: # South 
-            for col in df.columns:
-                df[col] = list(roll(''.join(df[col].tolist()), forward=True))
-        else: # east
-            for idx in df.index:
-                df.loc[idx] = list(roll(''.join(df.loc[idx].tolist()), forward=True))
+def run_cycles(df: pd.DataFrame, cycle_count: int) -> int:
+    for _ in range(cycle_count):
+        for col in df.columns: 
+            df[col] = list(roll(''.join(df[col]), forward=False))          # North
+        for idx in df.index:
+            df.loc[idx] = list(roll(''.join(df.loc[idx]), forward=False))  # West
+        for col in df.columns: 
+            df[col] = list(roll(''.join(df[col]), forward=True))           # South
+        for idx in df.index:
+            df.loc[idx] = list(roll(''.join(df.loc[idx]), forward=True))   # East
     return calc_score(df)
 
 def part1(df: pd.DataFrame) -> int:
-    return run(df, roll_count=1)
+    for col in df.columns: 
+        df[col] = list(roll(''.join(df[col]), forward=False))
+    return calc_score(df)
 
 def part2(df: pd.DataFrame) -> int:
-    return run(df, roll_count=1000000000)
+    return run_cycles(df, cycle_count=1000000000)
 
 if __name__ == '__main__':
     with open('input/day_14.txt', 'r') as f:
