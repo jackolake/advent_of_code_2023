@@ -10,7 +10,8 @@ def calc_score(df: pd.DataFrame) -> int:
     return ((result == 'O').sum(axis=1) * (result.index + 1)).sum()
 
 def run_cycles(df: pd.DataFrame, cycle_count: int) -> int:
-    for _ in range(cycle_count):
+    hash_list = []
+    for current_cycle in range(cycle_count):
         for col in df.columns: 
             df[col] = list(roll(''.join(df[col]), forward=False))          # North
         for idx in df.index:
@@ -19,6 +20,18 @@ def run_cycles(df: pd.DataFrame, cycle_count: int) -> int:
             df[col] = list(roll(''.join(df[col]), forward=True))           # South
         for idx in df.index:
             df.loc[idx] = list(roll(''.join(df.loc[idx]), forward=True))   # East
+        # Hash the current dataframe using 'O' locations
+        hash_df = set(df.where(df == "O").stack().index)
+        if hash_df in hash_list:
+            # Fast-forward to final state
+            first_occurence = hash_list.index(hash_df)          # 170
+            cycle_length = current_cycle - first_occurence      # 28
+            ff_hash = hash_list[first_occurence + (cycle_count - first_occurence) % cycle_length - 1]
+            rows, cols = zip(*ff_hash)
+            df = df.replace({'O': '.'})
+            df.values[rows, cols] = 'O'
+            break
+        hash_list.append(hash_df)
     return calc_score(df)
 
 def part1(df: pd.DataFrame) -> int:
