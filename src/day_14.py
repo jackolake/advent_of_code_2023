@@ -1,5 +1,6 @@
 from typing import List, Optional
 import pandas as pd
+import numpy as np
 
 def roll(seq: str, forward: bool) -> str:  #  O.#O..# => .O#..O#
     return '#'.join([((s.count('.') * '.') + (s.count('O') * 'O')) if forward else 
@@ -12,14 +13,10 @@ def calc_score(df: pd.DataFrame) -> int:
 def run_cycles(df: pd.DataFrame, cycle_count: int) -> int:
     hash_list = []
     for current_cycle in range(cycle_count):
-        for col in df.columns: 
-            df[col] = list(roll(''.join(df[col]), forward=False))          # North
-        for idx in df.index:
-            df.loc[idx] = list(roll(''.join(df.loc[idx]), forward=False))  # West
-        for col in df.columns: 
-            df[col] = list(roll(''.join(df[col]), forward=True))           # South
-        for idx in df.index:
-            df.loc[idx] = list(roll(''.join(df.loc[idx]), forward=True))   # East
+        df = df.apply(lambda col: list(roll(''.join(col), forward=False)), axis=0)                        # North
+        df = df.apply(lambda row: list(roll(''.join(row), forward=False)), axis=1, result_type='expand')  # West
+        df = df.apply(lambda col: list(roll(''.join(col), forward=True)), axis=0)                         # South
+        df = df.apply(lambda row: list(roll(''.join(row), forward=True)), axis=1, result_type='expand')   # East
         # Hash the current dataframe using 'O' locations
         hash_df = set(df.where(df == "O").stack().index)
         if hash_df in hash_list:
