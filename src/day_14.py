@@ -1,41 +1,43 @@
 from typing import List, Optional
 import pandas as pd
+import numpy as np
 
 def roll(seq: str, forward: bool) -> str:  #  O.#O..# => .O#..O#
-    results = []
-    for segment in seq.split('#'):
-        spaces, balls = ''.join(segment.count('.') * ['.']), ''.join(segment.count('O') * ['O'])
-        results.append((spaces + balls) if forward else (balls + spaces))
-    return '#'.join(results)
+    return '#'.join([((s.count('.') * '.') + (s.count('O') * 'O')) if forward else 
+                     ((s.count('O') * 'O') + (s.count('.') * '.')) for s in seq.split('#') ])
 
 def calc_score(df: pd.DataFrame) -> int:
     result = df[::-1].reset_index(drop=True)  # Flip it to calc weight
     return ((result == 'O').sum(axis=1) * (result.index + 1)).sum()
 
-def run(df: pd.DataFrame, roll_count: int) -> int:
-    for i in range(roll_count):
-        if i % 10000 == 0:
-            print(i)
-        # North, west, south, east
-        if i % 4 == 0:  # North
-            for col in df.columns:
-                df[col] = list(roll(''.join(df[col].tolist()), forward=False))
-        elif i % 4 == 1: # west
-            for idx in df.index:
-                df.loc[idx] = list(roll(''.join(df.loc[idx].tolist()), forward=False))
-        elif i % 4 == 2: # South 
-            for col in df.columns:
-                df[col] = list(roll(''.join(df[col].tolist()), forward=True))
-        else: # east
-            for idx in df.index:
-                df.loc[idx] = list(roll(''.join(df.loc[idx].tolist()), forward=True))
+def run_cycles(df: pd.DataFrame, cycle_count: int) -> int:
+    hash_list = []
+    for current_cycle in range(cycle_count):
+        df = df.apply(lambda col: list(roll(''.join(col), forward=False)), axis=0)                        # North
+        df = df.apply(lambda row: list(roll(''.join(row), forward=False)), axis=1, result_type='expand')  # West
+        df = df.apply(lambda col: list(roll(''.join(col), forward=True)), axis=0)                         # South
+        df = df.apply(lambda row: list(roll(''.join(row), forward=True)), axis=1, result_type='expand')   # East
+        # Hash the current dataframe using 'O' locations
+        hash_df = set(df.where(df == "O").stack().index)
+        if hash_df in hash_list:
+            # Fast-forward to final state
+            first_occurence = hash_list.index(hash_df)          # 170
+            cycle_length = current_cycle - first_occurence      # 28
+            ff_hash = hash_list[first_occurence + (cycle_count - first_occurence) % cycle_length - 1]
+            rows, cols = zip(*ff_hash)
+            df = df.replace({'O': '.'})
+            df.values[rows, cols] = 'O'
+            break
+        hash_list.append(hash_df)
     return calc_score(df)
 
 def part1(df: pd.DataFrame) -> int:
-    return run(df, roll_count=1)
+    for col in df.columns: 
+        df[col] = list(roll(''.join(df[col]), forward=False))
+    return calc_score(df)
 
 def part2(df: pd.DataFrame) -> int:
-    return run(df, roll_count=1000000000)
+    return run_cycles(df, cycle_count=1000000000)
 
 if __name__ == '__main__':
     with open('input/day_14.txt', 'r') as f:
